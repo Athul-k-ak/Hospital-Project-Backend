@@ -151,12 +151,13 @@ exports.login = async (req, res) => {
     const token = generateToken(user._id, role);
 
     // Set token in HTTP-only cookie
-    res.cookie("jwt", token, {
+   res.cookie("jwt", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+      secure: false,         // ⚠️ set to false for local dev (no HTTPS)
+      sameSite: "Lax",       // ✅ use Lax for same-origin development
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+});
+
 
     // ✅ Send profilePic in response
     res.json({

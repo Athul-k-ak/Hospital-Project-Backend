@@ -18,7 +18,7 @@ const getUserById = async (id) => {
 };
 
 const protect = async (req, res, next) => {
-  let token = req.cookies.jwt; // Get token from cookies
+  let token = req.cookies.token; // Get token from cookies
 
   if (!token) {
     console.log("❌ No Token Provided");

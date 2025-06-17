@@ -19,12 +19,12 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 
 connectDB();
 
-
 const app = express();
 app.use(cors({
   origin: "http://localhost:5173",  // Allow frontend URL
   credentials: true,  // Allow cookies
 }));
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
