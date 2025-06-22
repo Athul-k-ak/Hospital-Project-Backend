@@ -66,6 +66,37 @@ const getOnDutyStaff = async (req, res) => {
   const staff = await Staff.find({ onDuty: true }).select("name role");
   res.json(staff);
 };
+const getStaffCount = async (req, res) => {
+  try {
+    const count = await Staff.countDocuments();
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching staff count", error: error.message });
+  }
+};
+const listAvailableDoctorsToday = async (req, res) => {
+  try {
+    const today = new Date();
+    const dayOfWeek = today.toLocaleString("en-US", { weekday: "long" }); // e.g., "Wednesday"
+
+    // Fetch doctors whose availableDays includes today's day
+    const availableDoctors = await Doctor.find({
+      availableDays: dayOfWeek
+    }).select("name specialty");
+
+    return res.status(200).json({
+      count: availableDoctors.length,
+      doctors: availableDoctors
+    });
+  } catch (error) {
+    console.error("Error fetching available doctors:", error);
+    return res.status(500).json({
+      message: "Failed to fetch available doctors",
+      error: error.message
+    });
+  }
+};
+
 
 module.exports = {
   getPatientCount,
@@ -73,4 +104,6 @@ module.exports = {
   getTodayAppointments,
   getMonthlyRevenue,
   getOnDutyStaff,
+  getStaffCount,
+  listAvailableDoctorsToday
 };
