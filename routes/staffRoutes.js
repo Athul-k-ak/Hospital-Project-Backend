@@ -10,6 +10,6 @@ const upload = require("../middleware/uploadMiddleware");
 router.post("/add", protect,upload.single("profileImage"), authorizeRoles("admin"), addStaff);
 router.put("/edit/:staffId", protect, authorizeRoles("admin"), editStaff);
 router.delete("/delete/:staffId", protect, authorizeRoles("admin"), deleteStaff);
-router.get("/list", protect, authorizeRoles("admin"), listStaff);
+router.get("/list", protect, authorizeRoles("admin", "reception"), listStaff);
 
 module.exports = router;
