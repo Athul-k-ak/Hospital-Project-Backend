@@ -11,6 +11,8 @@ const doctorSchema = new mongoose.Schema({
   availableTime: { type: [String], required: true },
   role: { type: String, enum: ["doctor"], default: "doctor" }, // ✅ Add role
   profileImage: { type: String },
+  fee: { type: Number, default: 500 },
+  
 });
 
 module.exports = mongoose.model("Doctor", doctorSchema);
