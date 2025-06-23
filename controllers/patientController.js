@@ -1,13 +1,14 @@
 const Patient = require("../models/Patient");
+const Appointment = require("../models/Appointment");
 
-// Register Patient (Only Admin and Reception can register)
+// ===========================================================
+// 🧍 Register Patient (Admin / Reception Only)
+// ===========================================================
 const registerPatient = async (req, res) => {
   try {
-    
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized: No user found in request" });
     }
-
 
     if (req.user.role !== "admin" && req.user.role !== "reception") {
       return res.status(403).json({ message: "Access denied. Only Admin and Reception can register patients." });
@@ -33,11 +34,18 @@ const registerPatient = async (req, res) => {
   }
 };
 
-// Get all Patients (Only Admin and Reception can access)
+// ===========================================================
+// 📋 Get All Patients (Admin / Reception / Doctor)
+// ===========================================================
 const getPatients = async (req, res) => {
   try {
-    if (!req.user || (req.user.role !== "admin" && req.user.role !== "reception" && req.user.role !== "doctor")) {
-      return res.status(403).json({ message: "Access denied. Only Admin and Reception can access patients." });
+    if (
+      !req.user ||
+      (req.user.role !== "admin" && req.user.role !== "reception" && req.user.role !== "doctor")
+    ) {
+      return res.status(403).json({
+        message: "Access denied. Only Admin and Reception can access patients.",
+      });
     }
 
     const patients = await Patient.find({});
@@ -47,11 +55,15 @@ const getPatients = async (req, res) => {
   }
 };
 
-// Get Patients by Phone Number (Only Admin and Reception can access)
+// ===========================================================
+// 📞 Get Patients by Phone Number (Admin / Reception)
+// ===========================================================
 const getPatientsByPhone = async (req, res) => {
   try {
     if (!req.user || (req.user.role !== "admin" && req.user.role !== "reception")) {
-      return res.status(403).json({ message: "Access denied. Only Admin and Reception can search patients." });
+      return res.status(403).json({
+        message: "Access denied. Only Admin and Reception can search patients.",
+      });
     }
 
     const { phone } = req.params;
@@ -72,4 +84,31 @@ const getPatientsByPhone = async (req, res) => {
   }
 };
 
-module.exports = { registerPatient, getPatients, getPatientsByPhone };
+// ===========================================================
+// 🩺 Get Patients Assigned to Logged-in Doctor
+// ===========================================================
+const getPatientsOfDoctor = async (req, res) => {
+  try {
+    if (req.user.role !== "doctor") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const appointments = await Appointment.find({ doctorId: req.user._id }).distinct("patientId");
+    const patients = await Patient.find({ _id: { $in: appointments } });
+
+    res.json(patients);
+  } catch (error) {
+    console.error("Error fetching doctor patients:", error.message);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+// ===========================================================
+// ✅ Export All Controllers
+// ===========================================================
+module.exports = {
+  registerPatient,
+  getPatients,
+  getPatientsByPhone,
+  getPatientsOfDoctor,
+};
