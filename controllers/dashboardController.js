@@ -4,68 +4,29 @@ const Appointment = require("../models/Appointment");
 const Billing = require("../models/Billing");
 const Staff = require("../models/Staff");
 
+/* -------------------- Dashboard Metrics -------------------- */
+
+// 📌 Total Patients Count
 const getPatientCount = async (req, res) => {
-  const count = await Patient.countDocuments();
-  res.json({ count });
-};
-
-const getDoctorCount = async (req, res) => {
-  const count = await Doctor.countDocuments();
-  res.json({ count });
-};
-
-const getTodayAppointments = async (req, res) => {
   try {
-    const today = new Date();
-    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
-
-    const appointments = await Appointment.find({
-      date: { $gte: startOfDay, $lte: endOfDay }
-    })
-      .populate("patientId", "name")
-      .populate("doctorId", "name department")
-      .sort({ date: -1 })
-      .limit(5);
-
-    const count = await Appointment.countDocuments({
-      date: { $gte: startOfDay, $lte: endOfDay }
-    });
-
-    const recent = appointments.map(a => ({
-      patientName: a.patientId?.name || "Unknown",
-      doctorName: a.doctorId?.name || "Unknown",
-      department: a.doctorId?.department || "Unknown",
-      date: a.date,
-    }));
-
-    return res.status(200).json({ count, recent });
+    const count = await Patient.countDocuments();
+    res.json({ count });
   } catch (error) {
-    console.error("Error fetching today's appointments:", error);
-    return res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Error fetching patient count", error: error.message });
   }
 };
 
-
-const getMonthlyRevenue = async (req, res) => {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-  const bills = await Billing.find({
-    createdAt: { $gte: start, $lte: end },
-    paymentStatus: "Paid",
-  });
-
-  const amount = bills.reduce((sum, b) => sum + b.totalAmount, 0);
-  res.json({ amount });
+// 📌 Total Doctors Count
+const getDoctorCount = async (req, res) => {
+  try {
+    const count = await Doctor.countDocuments();
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching doctor count", error: error.message });
+  }
 };
 
-const getOnDutyStaff = async (req, res) => {
-  // Optionally, you could filter by shift/today/active etc.
-  const staff = await Staff.find({ onDuty: true }).select("name role");
-  res.json(staff);
-};
+// 📌 Total Staff Count
 const getStaffCount = async (req, res) => {
   try {
     const count = await Staff.countDocuments();
@@ -74,36 +35,101 @@ const getStaffCount = async (req, res) => {
     res.status(500).json({ message: "Error fetching staff count", error: error.message });
   }
 };
-const listAvailableDoctorsToday = async (req, res) => {
+
+// 📌 On-Duty Staff List
+const getOnDutyStaff = async (req, res) => {
   try {
-    const today = new Date();
-    const dayOfWeek = today.toLocaleString("en-US", { weekday: "long" }); // e.g., "Wednesday"
-
-    // Fetch doctors whose availableDays includes today's day
-    const availableDoctors = await Doctor.find({
-      availableDays: dayOfWeek
-    }).select("name specialty");
-
-    return res.status(200).json({
-      count: availableDoctors.length,
-      doctors: availableDoctors
-    });
+    const staff = await Staff.find({ onDuty: true }).select("name role");
+    res.json(staff);
   } catch (error) {
-    console.error("Error fetching available doctors:", error);
-    return res.status(500).json({
-      message: "Failed to fetch available doctors",
-      error: error.message
-    });
+    res.status(500).json({ message: "Error fetching on-duty staff", error: error.message });
   }
 };
 
+// 📌 Available Doctors Today
+const listAvailableDoctorsToday = async (req, res) => {
+  try {
+    const today = new Date();
+    const dayOfWeek = today.toLocaleString("en-US", { weekday: "long" }); // E.g., "Monday"
+
+    const availableDoctors = await Doctor.find({
+      availableDays: dayOfWeek,
+    }).select("name specialty");
+
+    res.json({
+      count: availableDoctors.length,
+      doctors: availableDoctors,
+    });
+  } catch (error) {
+    console.error("Available Doctors Error:", error);
+    res.status(500).json({ message: "Failed to fetch available doctors", error: error.message });
+  }
+};
+
+/* -------------------- Appointments -------------------- */
+
+// 📌 Today's Appointments Summary
+const getTodayAppointments = async (req, res) => {
+  try {
+    const today = new Date();
+    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+    const appointments = await Appointment.find({
+      date: { $gte: startOfDay, $lte: endOfDay },
+    })
+      .populate("patientId", "name")
+      .populate("doctorId", "name department")
+      .sort({ date: -1 })
+      .limit(5);
+
+    const count = await Appointment.countDocuments({
+      date: { $gte: startOfDay, $lte: endOfDay },
+    });
+
+    const recent = appointments.map((a) => ({
+      patientName: a.patientId?.name || "Unknown",
+      doctorName: a.doctorId?.name || "Unknown",
+      department: a.doctorId?.department || "Unknown",
+      date: a.date,
+    }));
+
+    res.status(200).json({ count, recent });
+  } catch (error) {
+    console.error("Today's Appointments Error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+/* -------------------- Billing -------------------- */
+
+// 📌 Monthly Revenue Summary
+const getMonthlyRevenue = async (req, res) => {
+  try {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const bills = await Billing.find({
+      createdAt: { $gte: start, $lte: end },
+      paymentStatus: "Paid",
+    });
+
+    const amount = bills.reduce((sum, bill) => sum + bill.totalAmount, 0);
+    res.json({ amount });
+  } catch (error) {
+    res.status(500).json({ message: "Error calculating monthly revenue", error: error.message });
+  }
+};
+
+/* -------------------- Export -------------------- */
 
 module.exports = {
   getPatientCount,
   getDoctorCount,
+  getStaffCount,
+  getOnDutyStaff,
+  listAvailableDoctorsToday,
   getTodayAppointments,
   getMonthlyRevenue,
-  getOnDutyStaff,
-  getStaffCount,
-  listAvailableDoctorsToday
 };
